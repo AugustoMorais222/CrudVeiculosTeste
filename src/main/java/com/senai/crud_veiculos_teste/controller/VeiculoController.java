@@ -3,9 +3,11 @@ package com.senai.crud_veiculos_teste.controller;
 import com.senai.crud_veiculos_teste.entidades.Veiculo;
 import com.senai.crud_veiculos_teste.repositorio.VeiculoRepositorio;
 import com.senai.crud_veiculos_teste.service.VeiculoService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 
 @RestController
@@ -13,7 +15,8 @@ import java.util.List;
 @CrossOrigin("*")
 public class VeiculoController {
 
-    private VeiculoService veiculoService;
+    @Autowired
+    public VeiculoService veiculoService;
 
     @GetMapping
     public List<Veiculo> findAll() {
@@ -30,11 +33,11 @@ public class VeiculoController {
         return veiculoService.update(veiculo);
     }
     @GetMapping("/{id}")
-    public Veiculo findById(@PathVariable Long id) {
+    public Veiculo findById(@PathVariable UUID id) {
         return veiculoService.findById(id);
     }
     @DeleteMapping
-    public void deleteById(@PathVariable Long id) {
+    public void deleteById(@PathVariable UUID id) {
         veiculoService.delete(veiculoService.findById(id));
     }
 }
