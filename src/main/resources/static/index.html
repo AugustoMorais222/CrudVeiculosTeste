@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <title>CRUD de Veículos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; }
+        .table-actions button { margin-right: 6px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="mb-4">CRUD de Veículos</h1>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <input id="searchInput" class="form-control"
+                   placeholder="Pesquisar por descrição, fabricante, placa..."/>
+        </div>
+        <div class="col-md-6 text-end">
+            <button id="reloadBtn" class="btn btn-secondary">Atualizar lista</button>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Adicionar veículo</div>
+        <div class="card-body">
+            <form id="createForm" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Descrição</label>
+                    <input name="descricao" class="form-control" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fabricante</label>
+                    <input name="fabricante" class="form-control" required />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Placa</label>
+                    <input name="placa" class="form-control" required />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Cor</label>
+                    <input name="cor" class="form-control" />
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <button type="reset" class="btn btn-outline-secondary">Limpar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Lista de veículos</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Descrição</th>
+                        <th>Fabricante</th>
+                        <th>Placa</th>
+                        <th>Cor</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                    </thead>
+                    <tbody id="vehiclesTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Edição -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="editForm" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar veículo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="id" />
+                <div class="mb-3">
+                    <label class="form-label">Descrição</label>
+                    <input name="descricao_modal" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Fabricante</label>
+                    <input name="fabricante_modal" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Placa</label>
+                    <input name="placa_modal" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Cor</label>
+                    <input name="cor_modal" class="form-control" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API_BASE = 'http://localhost:8080/api/veiculo';
+const vehiclesTableBody = document.getElementById('vehiclesTableBody');
+const createForm = document.getElementById('createForm');
+const editForm = document.getElementById('editForm');
+const editModalEl = document.getElementById('editModal');
+const editModal = new bootstrap.Modal(editModalEl);
+
+document.addEventListener('DOMContentLoaded', loadVehicles);
+
+createForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(createForm);
+    const payload = Object.fromEntries(formData.entries());
+    try {
+        await apiCreateVehicle(payload);
+        createForm.reset();
+        await loadVehicles();
+    } catch (err) {
+        alert('Erro ao criar veículo: ' + err.message);
+    }
+});
+
+editForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // Pega os valores explicitamente do modal
+    const payload = {
+        descricao: editForm.elements['descricao_modal'].value,
+        fabricante: editForm.elements['fabricante_modal'].value,
+        cor: editForm.elements['cor_modal'].value,
+        placa: editForm.elements['placa_modal'].value
+    };
+
+    const id = editForm.elements['id'].value; // id do veículo
+
+    try {
+        await apiUpdateVehicle(id, payload);
+        editModal.hide();
+        await loadVehicles();
+    } catch (err) {
+        alert('Erro ao atualizar veículo: ' + err.message);
+    }
+});
+
+
+async function apiGetVehicles() {
+    const res = await fetch(API_BASE);
+    if (!res.ok) throw new Error('Erro ao buscar veículos');
+    return res.json();
+}
+
+async function apiCreateVehicle(data) {
+    const res = await fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+async function apiUpdateVehicle(id, data) {
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+async function apiDeleteVehicle(id) {
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(await res.text());
+}
+
+async function loadVehicles() {
+    vehiclesTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+    const vehicles = await apiGetVehicles();
+    renderVehicles(vehicles);
+}
+
+function renderVehicles(list) {
+    vehiclesTableBody.innerHTML = '';
+    if (!list || list.length === 0) {
+        vehiclesTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum veículo encontrado.</td></tr>';
+        return;
+    }
+    for (const v of list) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${v.id ?? ''}</td>
+            <td>${v.descricao ?? ''}</td>
+            <td>${v.fabricante ?? ''}</td>
+            <td>${v.placa ?? ''}</td>
+            <td>${v.cor ?? ''}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary">Editar</button>
+                <button class="btn btn-sm btn-outline-danger">Excluir</button>
+            </td>
+        `;
+        tr.querySelector('.btn-outline-primary').addEventListener('click', () => openEditModal(v));
+        tr.querySelector('.btn-outline-danger').addEventListener('click', async () => {
+            if (confirm(`Excluir veículo ${v.descricao}?`)) {
+                await apiDeleteVehicle(v.id);
+                await loadVehicles();
+            }
+        });
+        vehiclesTableBody.appendChild(tr);
+    }
+}
+
+function openEditModal(vehicle) {
+    editForm.elements['id'].value = vehicle.id ?? '';
+    editForm.elements['descricao_modal'].value = vehicle.descricao ?? '';
+    editForm.elements['fabricante_modal'].value = vehicle.fabricante ?? '';
+    editForm.elements['placa_modal'].value = vehicle.placa ?? '';
+    editForm.elements['cor_modal'].value = vehicle.cor ?? '';
+    editModal.show();
+}
+</script>
+</body>
+</html>
